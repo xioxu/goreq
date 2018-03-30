@@ -7,9 +7,9 @@ import (
 	"net/url"
 )
 
-var DefaultTransport http.RoundTripper = &http.Transport{MaxIdleConns: 10, IdleConnTimeout: 30 * time.Second,}
-var DefaultClient = &http.Client{Transport: DefaultTransport}
-var DefaultOptions = makeDefaultOptions()
+var defaultTransport http.RoundTripper = &http.Transport{MaxIdleConns: 10, IdleConnTimeout: 30 * time.Second,}
+var defaultClient = &http.Client{Transport: defaultTransport}
+var defaultOptions = DefaultOptions()
 
 type GoReq struct {
 	options   *ReqOptions
@@ -37,17 +37,22 @@ type ReqOptions struct {
 	Proxy string
 }
 
-func makeDefaultOptions() *ReqOptions {
+func DefaultOptions() *ReqOptions {
 	options := ReqOptions{
 		Method:         "Get",
 		FollowRedirect: false,
+		Headers:make(map[string]string),
 	}
 
 	return &options
 }
 
+func Options(opts *ReqOptions)  *ReqOptions{
+	return mergeOptions(opts,defaultOptions)
+}
+
 func request(url string, callback func(error, *http.Response, []byte)) {
-	resp, err := DefaultClient.Get(url)
+	resp, err := defaultClient.Get(url)
 	errHandler := func(error) bool {
 		if err != nil {
 			if callback != nil {
@@ -104,30 +109,28 @@ func Req(options *ReqOptions) *GoReq {
 		Transport: goReq.transport,
 	}
 	goReq.transport.Proxy = http.ProxyFromEnvironment
-	goReq.options = mergeOptions(options, DefaultOptions)
+	goReq.options = mergeOptions(options, defaultOptions)
 	return &goReq
 }
 
 func (req *GoReq) Post(url string) *GoReq {
-	return Req(&ReqOptions{
-		Method: "POST",
-		Url:    url,
-	})
+	req.options.Url = url;
+	req.options.Method = "POST"
+	return  req
 }
 
 func (req *GoReq) Get(url string) *GoReq {
-	return Req(&ReqOptions{
-		Method: "POST",
-		Url:    url,
-	})
+	req.options.Url = url;
+	req.options.Method = "Get"
+	return  req
 }
 
-func (req *GoReq) Do() (error, *http.Response, []byte) {
+func (req *GoReq) Do() (  []byte,*http.Response,error) {
 	if req.options.Proxy != "" {
 		parsedProxyUrl, err := url.Parse(req.options.Proxy)
 
 		if err != nil {
-			return err, nil, nil
+			return nil, nil,err
 		} else {
 			req.transport.Proxy = http.ProxyURL(parsedProxyUrl)
 		}
@@ -135,7 +138,7 @@ func (req *GoReq) Do() (error, *http.Response, []byte) {
 
 	httpReq, err := http.NewRequest(req.options.Method, req.options.Url, nil)
 	if err != nil {
-		return err, nil, nil
+		return nil, nil,err
 	}
 
 	if req.options.Headers != nil {
@@ -146,15 +149,14 @@ func (req *GoReq) Do() (error, *http.Response, []byte) {
 
 	resp, err := req.client.Do(httpReq)
 	if err != nil {
-		return err, nil, nil
+		return nil, nil,err
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err, nil, nil
+		return nil, nil,err
 	}
 
-	return err, resp, body
-
+	return  body,resp,nil
 }
