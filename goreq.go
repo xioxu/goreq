@@ -46,6 +46,8 @@ type ReqOptions struct {
 	QueryString url.Values
 
 	bodyContent httpReqBody
+
+	Timeout time.Duration
 }
 
 type httpReqBody interface {
@@ -222,6 +224,10 @@ func (req *GoReq) Do() ([]byte, *http.Response, error) {
 
 	if req.Options.Jar != nil {
 		req.client.Jar = req.Options.Jar
+	}
+
+	if req.Options.Timeout > 0 {
+		req.client.Timeout = req.Options.Timeout
 	}
 
 	var submitBody io.Reader
