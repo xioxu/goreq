@@ -211,6 +211,16 @@ func (req *GoReq) JsonObject(jsonObj interface{}) {
 	}
 }
 
+func (req *GoReq) To(result interface{}) (*http.Response, error) {
+   body, resp,err := req.Do()
+
+   if err == nil{
+	   err = json.Unmarshal((body), result)
+   }
+
+	return resp,err
+}
+
 func (req *GoReq) Do() ([]byte, *http.Response, error) {
 	if req.Options.Proxy != "" {
 		parsedProxyUrl, err := url.Parse(req.Options.Proxy)
