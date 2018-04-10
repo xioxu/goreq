@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/xioxu/goreq.svg?branch=master)](https://travis-ci.org/xioxu/goreq)
+[![GoDoc](https://godoc.org/github.com/xioxu/goreq?status.svg)](https://godoc.org/github.com/xioxu/goreq)
+
 # goreq
 一个golang下的轻量级的http request工具
 
