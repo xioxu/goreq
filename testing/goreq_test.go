@@ -23,7 +23,7 @@ func TestPost(t *testing.T)  {
 }
 
 func TestGet(t *testing.T)  {
-	req := goreq.Req(&goreq.ReqOptions{Proxy:"http://localhost:8888"})
+	req := goreq.Req(nil)
 	body,resp,_ := req.Get("https://www.baidu.com").Do()
 	fmt.Println(string(body))
 	fmt.Println(resp.StatusCode)
