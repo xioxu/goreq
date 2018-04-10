@@ -193,22 +193,27 @@ func (req *GoReq) Get(url string) *GoReq {
 	return req
 }
 
-func (req *GoReq) Form(formData url.Values) {
+func (req *GoReq) FormData(formData url.Values) *GoReq{
 	req.Options.bodyContent = &formContent{
 		content: formData,
 	}
+	return req
 }
 
-func (req *GoReq) JsonString(jsonStr []byte) {
+func (req *GoReq) JsonString(jsonStr []byte) *GoReq{
 	req.Options.bodyContent = &jsonContent{
 		content: jsonStr,
 	}
+
+	return req
 }
 
-func (req *GoReq) JsonObject(jsonObj interface{}) {
+func (req *GoReq) JsonObject(jsonObj interface{}) *GoReq{
 	req.Options.bodyContent = &jsonObjContent{
 		content: jsonObj,
 	}
+
+	return req
 }
 
 func (req *GoReq) To(result interface{}) (*http.Response, error) {
