@@ -31,7 +31,7 @@ type ReqOptions struct {
 	Url string
 
 	//http headers (default: {})
-	Headers map[string]string
+	Headers map[string][]string
 
 	// follow HTTP 3xx responses as redirects (default: true).
 	FollowRedirect bool
@@ -70,6 +70,15 @@ func (jsonString *jsonContent) build() (contentType string, data io.Reader) {
 	return "application/json", bytes.NewReader(jsonString.content)
 }
 
+type reqPipeContent struct {
+	reader io.ReadCloser
+	contentType string
+}
+
+func (reqPipe *reqPipeContent) build() (contentType string, data io.Reader) {
+	return reqPipe.contentType, reqPipe.reader
+}
+
 type jsonObjContent struct {
 	content interface{}
 }
@@ -106,7 +115,7 @@ func DefaultOptions() *ReqOptions {
 	options := ReqOptions{
 		Method:         "Get",
 		FollowRedirect: false,
-		Headers:        make(map[string]string),
+		Headers:        make(map[string][]string),
 		QueryString:    make(url.Values),
 	}
 
@@ -117,32 +126,10 @@ func Options(opts *ReqOptions) *ReqOptions {
 	return mergeOptions(opts, defaultOptions)
 }
 
-func request(url string, callback func(error, *http.Response, []byte)) {
-	resp, err := defaultClient.Get(url)
-	errHandler := func(error) bool {
-		if err != nil {
-			if callback != nil {
-				callback(err, resp, nil)
-			}
-			return true
-		}
-		return false
-	}
-
-	if (!errHandler(err)) {
-		defer resp.Body.Close()
-
-		body, err := ioutil.ReadAll(resp.Body)
-
-		if (!errHandler(err)) {
-			callback(err, resp, body)
-		}
-	}
-}
-
 func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
 	if copyTo == nil {
-		return copyFrom
+		tmpOptions := *copyFrom
+		return &tmpOptions
 	}
 
 	if copyFrom == nil {
@@ -163,6 +150,10 @@ func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
 
 	if copyTo.Headers == nil {
 		copyTo.Headers = copyFrom.Headers
+	}else {
+		for k,v := range copyFrom.Headers{
+			copyTo.Headers[k] = v
+		}
 	}
 
 	return copyTo
@@ -216,6 +207,63 @@ func (req *GoReq) JsonObject(jsonObj interface{}) *GoReq{
 	return req
 }
 
+func (req *GoReq) PipeFromReq(r *http.Request) (*GoReq) {
+	removeReqHeaders := map[string]interface{}{
+		"Connection":1,
+	}
+	pHeaders := make(map[string][]string)
+	   for k,v := range r.Header{
+
+			if removeReqHeaders[k] == nil{
+				pHeaders[k] =v
+			}
+	   }
+
+	req.Options = mergeOptions(req.Options,&ReqOptions{Headers:pHeaders})
+	req.Options.bodyContent = &reqPipeContent{reader:r.Body,contentType:r.Header.Get("Content-Type")}
+
+return req
+}
+
+func (req *GoReq) PipeStream(writer io.Writer) (error) {
+	reader,_, err := req.prepareReq()
+
+	if err != nil {
+		return  err
+	}
+	defer (reader).Close()
+
+	p := make([]byte, 4)
+
+	for {
+		n, err := (reader).Read(p)
+
+		if err != nil{
+			if err == io.EOF {
+				(writer).Write(p[:n])
+				break
+			}
+
+			return err
+		}
+
+		(writer).Write(p[:n])
+	}
+
+	return nil
+}
+
+func (req *GoReq) PipeReq(nextReq *GoReq) (*GoReq, error) {
+	reader,resp, err := req.prepareReq()
+
+	if err != nil {
+		return  nil,err
+	}
+
+	nextReq.Options.bodyContent = &reqPipeContent{reader:reader,contentType:resp.Header.Get("reqPipeContent")}
+	return  nextReq,nil
+}
+
 func (req *GoReq) To(result interface{}) (*http.Response, error) {
    body, resp,err := req.Do()
 
@@ -226,12 +274,12 @@ func (req *GoReq) To(result interface{}) (*http.Response, error) {
 	return resp,err
 }
 
-func (req *GoReq) Do() ([]byte, *http.Response, error) {
+func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error){
 	if req.Options.Proxy != "" {
 		parsedProxyUrl, err := url.Parse(req.Options.Proxy)
 
 		if err != nil {
-			return nil, nil, err
+			return nil, nil,err
 		} else {
 			req.transport.Proxy = http.ProxyURL(parsedProxyUrl)
 		}
@@ -249,26 +297,33 @@ func (req *GoReq) Do() ([]byte, *http.Response, error) {
 	var contentType string
 	if req.Options.bodyContent != nil {
 		contentType, submitBody = req.Options.bodyContent.build()
-		req.Options.Headers["Content-Type"] = contentType
+
+		if closer,ok := submitBody.(io.ReadCloser); ok {
+			defer closer.Close()
+		}
+		req.Options.Headers["Content-Type"] = []string{contentType}
 	}
 
 	httpReq, err := http.NewRequest(strings.ToUpper(req.Options.Method), req.Options.buidUrl(), submitBody)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil,err
 	}
 
 	if req.Options.Headers != nil {
 		for k, v := range req.Options.Headers {
-			httpReq.Header.Add(k, v)
+			httpReq.Header[k] = v
 		}
 	}
 
-	resp, err := req.client.Do(httpReq)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil,err
 	}
 
-	defer resp.Body.Close()
+	resp, err := req.client.Do(httpReq)
+
+	if err != nil {
+		return nil, nil,err
+	}
 
 	var reader io.ReadCloser
 	switch resp.Header.Get("Content-Encoding") {
@@ -279,7 +334,19 @@ func (req *GoReq) Do() ([]byte, *http.Response, error) {
 		reader = resp.Body
 	}
 
+	return reader,resp,nil
+}
+
+func (req *GoReq) Do() ([]byte, *http.Response, error) {
+	reader,resp, err := req.prepareReq()
+
+	if err != nil {
+		return nil, nil, err
+	}
+	defer (reader).Close()
+
 	body, err := ioutil.ReadAll(reader)
+
 	if err != nil {
 		return nil, nil, err
 	}
