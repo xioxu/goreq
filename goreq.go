@@ -1,19 +1,19 @@
 package goreq
 
 import (
-	"time"
-	"net/http"
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
+	"io"
 	"io/ioutil"
+	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"strings"
-	"bytes"
-	"io"
-	"encoding/json"
-	"net/http/cookiejar"
-	"compress/gzip"
+	"time"
 )
 
-var defaultTransport http.RoundTripper = &http.Transport{MaxIdleConns: 10, IdleConnTimeout: 30 * time.Second,}
+var defaultTransport http.RoundTripper = &http.Transport{MaxIdleConns: 10, IdleConnTimeout: 30 * time.Second}
 var defaultClient = &http.Client{Transport: defaultTransport}
 var defaultOptions = DefaultOptions()
 
@@ -71,7 +71,7 @@ func (jsonString *jsonContent) build() (contentType string, data io.Reader) {
 }
 
 type reqPipeContent struct {
-	reader io.ReadCloser
+	reader      io.ReadCloser
 	contentType string
 }
 
@@ -102,9 +102,9 @@ func (options *ReqOptions) buidUrl() string {
 
 	if qs != "" {
 		if strings.Contains(qs, "?") {
-			url += "&" + qs;
+			url += "&" + qs
 		} else {
-			url += "?" + qs;
+			url += "?" + qs
 		}
 	}
 
@@ -150,8 +150,8 @@ func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
 
 	if copyTo.Headers == nil {
 		copyTo.Headers = copyFrom.Headers
-	}else {
-		for k,v := range copyFrom.Headers{
+	} else {
+		for k, v := range copyFrom.Headers {
 			copyTo.Headers[k] = v
 		}
 	}
@@ -173,25 +173,25 @@ func Req(options *ReqOptions) *GoReq {
 }
 
 func (req *GoReq) Post(url string) *GoReq {
-	req.Options.Url = url;
+	req.Options.Url = url
 	req.Options.Method = "POST"
 	return req
 }
 
 func (req *GoReq) Get(url string) *GoReq {
-	req.Options.Url = url;
+	req.Options.Url = url
 	req.Options.Method = "Get"
 	return req
 }
 
-func (req *GoReq) FormData(formData url.Values) *GoReq{
+func (req *GoReq) FormData(formData url.Values) *GoReq {
 	req.Options.bodyContent = &formContent{
 		content: formData,
 	}
 	return req
 }
 
-func (req *GoReq) JsonString(jsonStr []byte) *GoReq{
+func (req *GoReq) JsonString(jsonStr []byte) *GoReq {
 	req.Options.bodyContent = &jsonContent{
 		content: jsonStr,
 	}
@@ -199,7 +199,7 @@ func (req *GoReq) JsonString(jsonStr []byte) *GoReq{
 	return req
 }
 
-func (req *GoReq) JsonObject(jsonObj interface{}) *GoReq{
+func (req *GoReq) JsonObject(jsonObj interface{}) *GoReq {
 	req.Options.bodyContent = &jsonObjContent{
 		content: jsonObj,
 	}
@@ -207,29 +207,29 @@ func (req *GoReq) JsonObject(jsonObj interface{}) *GoReq{
 	return req
 }
 
-func (req *GoReq) PipeFromReq(r *http.Request) (*GoReq) {
+func (req *GoReq) PipeFromReq(r *http.Request) *GoReq {
 	removeReqHeaders := map[string]interface{}{
-		"Connection":1,
+		"Connection": 1,
 	}
 	pHeaders := make(map[string][]string)
-	   for k,v := range r.Header{
+	for k, v := range r.Header {
 
-			if removeReqHeaders[k] == nil{
-				pHeaders[k] =v
-			}
-	   }
+		if removeReqHeaders[k] == nil {
+			pHeaders[k] = v
+		}
+	}
 
-	req.Options = mergeOptions(req.Options,&ReqOptions{Headers:pHeaders})
-	req.Options.bodyContent = &reqPipeContent{reader:r.Body,contentType:r.Header.Get("Content-Type")}
+	req.Options = mergeOptions(req.Options, &ReqOptions{Headers: pHeaders})
+	req.Options.bodyContent = &reqPipeContent{reader: r.Body, contentType: r.Header.Get("Content-Type")}
 
-return req
+	return req
 }
 
-func (req *GoReq) PipeStream(writer io.Writer) (error) {
-	reader,_, err := req.prepareReq()
+func (req *GoReq) PipeStream(writer io.Writer) error {
+	reader, _, err := req.prepareReq()
 
 	if err != nil {
-		return  err
+		return err
 	}
 	defer (reader).Close()
 
@@ -238,7 +238,7 @@ func (req *GoReq) PipeStream(writer io.Writer) (error) {
 	for {
 		n, err := (reader).Read(p)
 
-		if err != nil{
+		if err != nil {
 			if err == io.EOF {
 				(writer).Write(p[:n])
 				break
@@ -254,32 +254,32 @@ func (req *GoReq) PipeStream(writer io.Writer) (error) {
 }
 
 func (req *GoReq) PipeReq(nextReq *GoReq) (*GoReq, error) {
-	reader,resp, err := req.prepareReq()
+	reader, resp, err := req.prepareReq()
 
 	if err != nil {
-		return  nil,err
+		return nil, err
 	}
 
-	nextReq.Options.bodyContent = &reqPipeContent{reader:reader,contentType:resp.Header.Get("reqPipeContent")}
-	return  nextReq,nil
+	nextReq.Options.bodyContent = &reqPipeContent{reader: reader, contentType: resp.Header.Get("reqPipeContent")}
+	return nextReq, nil
 }
 
 func (req *GoReq) To(result interface{}) (*http.Response, error) {
-   body, resp,err := req.Do()
+	body, resp, err := req.Do()
 
-   if err == nil{
-	   err = json.Unmarshal((body), result)
-   }
+	if err == nil {
+		err = json.Unmarshal((body), result)
+	}
 
-	return resp,err
+	return resp, err
 }
 
-func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error){
+func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
 	if req.Options.Proxy != "" {
 		parsedProxyUrl, err := url.Parse(req.Options.Proxy)
 
 		if err != nil {
-			return nil, nil,err
+			return nil, nil, err
 		} else {
 			req.transport.Proxy = http.ProxyURL(parsedProxyUrl)
 		}
@@ -298,7 +298,7 @@ func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error){
 	if req.Options.bodyContent != nil {
 		contentType, submitBody = req.Options.bodyContent.build()
 
-		if closer,ok := submitBody.(io.ReadCloser); ok {
+		if closer, ok := submitBody.(io.ReadCloser); ok {
 			defer closer.Close()
 		}
 		req.Options.Headers["Content-Type"] = []string{contentType}
@@ -306,7 +306,7 @@ func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error){
 
 	httpReq, err := http.NewRequest(strings.ToUpper(req.Options.Method), req.Options.buidUrl(), submitBody)
 	if err != nil {
-		return nil, nil,err
+		return nil, nil, err
 	}
 
 	if req.Options.Headers != nil {
@@ -316,13 +316,13 @@ func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error){
 	}
 
 	if err != nil {
-		return nil, nil,err
+		return nil, nil, err
 	}
 
 	resp, err := req.client.Do(httpReq)
 
 	if err != nil {
-		return nil, nil,err
+		return nil, nil, err
 	}
 
 	var reader io.ReadCloser
@@ -334,11 +334,11 @@ func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error){
 		reader = resp.Body
 	}
 
-	return reader,resp,nil
+	return reader, resp, nil
 }
 
 func (req *GoReq) Do() ([]byte, *http.Response, error) {
-	reader,resp, err := req.prepareReq()
+	reader, resp, err := req.prepareReq()
 
 	if err != nil {
 		return nil, nil, err
