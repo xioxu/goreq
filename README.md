@@ -10,7 +10,7 @@ A simple http request library for golang.
 
 # Simple to use
 
-``` go
+```go
     req := goreq.Req(nil)
 	body,_,_ := req.Get("https://www.baidu.com").Do()
 	fmt.Print(string(body))
@@ -48,14 +48,14 @@ There are some Pipe methods to handle different case:
 
 ### PipeStream
 You can pipe any response to a writer. (Refer to UT: TestPipeSream)
-```
+```go
   req := goreq.Req(nil)
   req.Get("https://www.baidu.com").PipeStream(fileStream)
 ```
 
 ### PipeReq
 You can pipe a request result to next request (Refer to UT: TestPipeReq)
-```
+```go
   req1 := goreq.Req(nil)
   req2 := goreq.Req(nil)
   req2.Post("http://www.bbb.com/submit")
@@ -69,7 +69,7 @@ Pipe the http.Request content to goReq request (UT: TestPipeFromReq)
 Pipe the result to a http.Response
 
 We can create a reverseProxy server through PipeFromReq and PipeToResponse easily:
-```$xslt
+```go
 if err := http.ListenAndServe(":8080", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		req := goreq.Req(&goreq.ReqOptions{
@@ -92,7 +92,7 @@ You can set the request body with the folloing methods:
 
 ## Cookie
 
-```$xslt
+```go
 cookieJar,_ := cookiejar.New(nil)
 req := goreq.Req(&goreq.ReqOptions{
 			Method: "get",
