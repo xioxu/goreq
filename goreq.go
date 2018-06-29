@@ -206,10 +206,52 @@ func (req *GoReq) JsonObject(jsonObj interface{}) *GoReq {
 
 	return req
 }
+func (req *GoReq) PipeToResponse(w http.ResponseWriter) error{
+	reader, resp, err := req.prepareReq()
+
+	removeResHeaders := map[string]interface{}{
+		"Connection": 1,
+	}
+
+	if err != nil {
+		return err
+	}
+	defer (reader).Close()
+
+	p := make([]byte, 4)
+
+	for k,v := range resp.Header{
+		if removeResHeaders[k] == nil{
+			for _,vSub := range v{
+				w.Header().Add(k,vSub)
+			}
+		}
+	}
+
+	w.WriteHeader(resp.StatusCode)
+	for {
+		n, err := (reader).Read(p)
+
+		if err != nil {
+			if err == io.EOF {
+				w.Write(p[:n])
+				break
+			}
+
+			return err
+		}
+
+		w.Write(p[:n])
+	}
+
+	return nil
+}
 
 func (req *GoReq) PipeFromReq(r *http.Request) *GoReq {
 	removeReqHeaders := map[string]interface{}{
 		"Connection": 1,
+		"Referer":1,
+		"Origin":1,
 	}
 	pHeaders := make(map[string][]string)
 	for k, v := range r.Header {
@@ -226,12 +268,13 @@ func (req *GoReq) PipeFromReq(r *http.Request) *GoReq {
 }
 
 func (req *GoReq) PipeStream(writer io.Writer) error {
-	reader, _, err := req.prepareReq()
+	reader, resp, err := req.prepareReq()
+	readerCloser,err := getStringReader(resp,reader)
 
 	if err != nil {
 		return err
 	}
-	defer (reader).Close()
+	defer (readerCloser).Close()
 
 	p := make([]byte, 4)
 
@@ -255,12 +298,13 @@ func (req *GoReq) PipeStream(writer io.Writer) error {
 
 func (req *GoReq) PipeReq(nextReq *GoReq) (*GoReq, error) {
 	reader, resp, err := req.prepareReq()
+	readerCloser,err := getStringReader(resp,reader)
 
 	if err != nil {
 		return nil, err
 	}
 
-	nextReq.Options.bodyContent = &reqPipeContent{reader: reader, contentType: resp.Header.Get("reqPipeContent")}
+	nextReq.Options.bodyContent = &reqPipeContent{reader: readerCloser, contentType: resp.Header.Get("reqPipeContent")}
 	return nextReq, nil
 }
 
@@ -319,33 +363,48 @@ func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
 		return nil, nil, err
 	}
 
+	if req.Options.FollowRedirect {
+          req.client.CheckRedirect = nil
+	}else {
+		req.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}
+	}
+
 	resp, err := req.client.Do(httpReq)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var reader io.ReadCloser
-	switch resp.Header.Get("Content-Encoding") {
-	case "gzip":
-		reader, err = gzip.NewReader(resp.Body)
+	return resp.Body, resp, nil
+}
+
+func getStringReader(resp *http.Response, reader io.ReadCloser) (io.ReadCloser,error)  {
+	if resp.Header.Get("Content-Encoding") == "gzip"{
 		defer reader.Close()
-	default:
-		reader = resp.Body
+		reader, err := gzip.NewReader(resp.Body)
+
+		if err != nil{
+			return nil,err
+		}
+
+		return reader,nil
 	}
 
-	return reader, resp, nil
+	return reader,nil
 }
 
 func (req *GoReq) Do() ([]byte, *http.Response, error) {
 	reader, resp, err := req.prepareReq()
-
+	readerCloser,err := getStringReader(resp,reader)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer (reader).Close()
 
-	body, err := ioutil.ReadAll(reader)
+	defer (readerCloser).Close()
+
+	body, err := ioutil.ReadAll(readerCloser)
 
 	if err != nil {
 		return nil, nil, err
