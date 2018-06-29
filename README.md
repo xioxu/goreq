@@ -1,10 +1,9 @@
+# goreq
 [![Build Status](https://travis-ci.org/xioxu/goreq.svg?branch=master)](https://travis-ci.org/xioxu/goreq)
 [![GoDoc](https://godoc.org/github.com/xioxu/goreq?status.svg)](https://godoc.org/github.com/xioxu/goreq)
+[![LICENSE](https://img.shields.io/badge/license-Apache%202-blue.svg)](https://github.com/huaweicloud/golangsdk/blob/master/LICENSE)
 
-# goreq
 A simple http request library for golang. 
-
-golang下的一个轻量级http request类库
 
 # Install
 `go get github.com/xioxu/goreq`
