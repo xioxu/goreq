@@ -53,7 +53,7 @@ type ReqOptions struct {
 
 	Timeout time.Duration
 
-    HeadersToBeRemove []string
+	HeadersToBeRemove []string
 }
 
 type httpReqBody interface {
@@ -117,7 +117,6 @@ func (options *ReqOptions) buidUrl() string {
 	return url
 }
 
-
 func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
 	if copyTo == nil {
 		tmpOptions := *copyFrom
@@ -140,16 +139,15 @@ func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
 		copyTo.Jar = copyFrom.Jar
 	}
 
-	if copyFrom.FollowRedirect != nil{
+	if copyFrom.FollowRedirect != nil {
 		redirect := *copyFrom.FollowRedirect
 		copyTo.FollowRedirect = &redirect
 	}
 
-	if copyFrom.Proxy != nil{
+	if copyFrom.Proxy != nil {
 		proxy := *copyFrom.Proxy
 		copyTo.Proxy = &proxy
 	}
-
 
 	if copyTo.Headers == nil {
 		copyTo.Headers = copyFrom.Headers
@@ -164,7 +162,7 @@ func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
 
 func (req *GoReq) Req(options *ReqOptions) *GoReq {
 	mergedOptions := *req.Options
-   return Req(mergeOptions(&mergedOptions,options))
+	return Req(mergeOptions(&mergedOptions, options))
 }
 
 func Req(options *ReqOptions) *GoReq {
@@ -176,10 +174,10 @@ func Req(options *ReqOptions) *GoReq {
 		Transport: goReq.transport,
 	}
 
-	if options == nil{
+	if options == nil {
 		copyDefault := *defaultOptions
 		goReq.Options = &copyDefault
-	}else {
+	} else {
 		goReq.Options = options
 	}
 
@@ -220,7 +218,7 @@ func (req *GoReq) JsonObject(jsonObj interface{}) *GoReq {
 
 	return req
 }
-func (req *GoReq) PipeToResponse(w http.ResponseWriter) error{
+func (req *GoReq) PipeToResponse(w http.ResponseWriter) error {
 	reader, resp, err := req.prepareReq()
 
 	removeResHeaders := map[string]interface{}{
@@ -234,10 +232,10 @@ func (req *GoReq) PipeToResponse(w http.ResponseWriter) error{
 
 	p := make([]byte, 4)
 
-	for k,v := range resp.Header{
-		if removeResHeaders[k] == nil{
-			for _,vSub := range v{
-				w.Header().Add(k,vSub)
+	for k, v := range resp.Header {
+		if removeResHeaders[k] == nil {
+			for _, vSub := range v {
+				w.Header().Add(k, vSub)
 			}
 		}
 	}
@@ -264,8 +262,8 @@ func (req *GoReq) PipeToResponse(w http.ResponseWriter) error{
 func (req *GoReq) PipeFromReq(r *http.Request) *GoReq {
 	removeReqHeaders := map[string]interface{}{
 		"Connection": 1,
-		"Referer":1,
-		"Origin":1,
+		"Referer":    1,
+		"Origin":     1,
 	}
 	pHeaders := make(map[string][]string)
 	for k, v := range r.Header {
@@ -282,7 +280,7 @@ func (req *GoReq) PipeFromReq(r *http.Request) *GoReq {
 
 func (req *GoReq) PipeStream(writer io.Writer) error {
 	reader, resp, err := req.prepareReq()
-	readerCloser,err := getStringReader(resp,reader)
+	readerCloser, err := getStringReader(resp, reader)
 
 	if err != nil {
 		return err
@@ -311,7 +309,7 @@ func (req *GoReq) PipeStream(writer io.Writer) error {
 
 func (req *GoReq) PipeReq(nextReq *GoReq) (*GoReq, error) {
 	reader, resp, err := req.prepareReq()
-	readerCloser,err := getStringReader(resp,reader)
+	readerCloser, err := getStringReader(resp, reader)
 
 	if err != nil {
 		return nil, err
@@ -331,12 +329,12 @@ func (req *GoReq) To(result interface{}) (*http.Response, error) {
 	return resp, err
 }
 
-func (req *GoReq) inToBeRemovedHeader(k string)  bool {
-	if req.Options.HeadersToBeRemove == nil{
+func (req *GoReq) inToBeRemovedHeader(k string) bool {
+	if req.Options.HeadersToBeRemove == nil {
 		return false
 	}
 
-	for _,key := range req.Options.HeadersToBeRemove{
+	for _, key := range req.Options.HeadersToBeRemove {
 		if key == k {
 			return true
 		}
@@ -393,13 +391,13 @@ func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
 	}
 
 	if req.Options.FollowRedirect == nil {
-          req.client.CheckRedirect = nil
-	}else {
+		req.client.CheckRedirect = nil
+	} else {
 		if req.Options.FollowRedirect.Value {
 			req.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
 			}
-		}else {
+		} else {
 			req.client.CheckRedirect = nil
 		}
 	}
@@ -413,24 +411,24 @@ func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
 	return resp.Body, resp, nil
 }
 
-func getStringReader(resp *http.Response, reader io.ReadCloser) (io.ReadCloser,error)  {
-	if resp.Header.Get("Content-Encoding") == "gzip"{
+func getStringReader(resp *http.Response, reader io.ReadCloser) (io.ReadCloser, error) {
+	if resp.Header.Get("Content-Encoding") == "gzip" {
 		defer reader.Close()
 		reader, err := gzip.NewReader(resp.Body)
 
-		if err != nil{
-			return nil,err
+		if err != nil {
+			return nil, err
 		}
 
-		return reader,nil
+		return reader, nil
 	}
 
-	return reader,nil
+	return reader, nil
 }
 
 func (req *GoReq) Do() ([]byte, *http.Response, error) {
 	reader, resp, err := req.prepareReq()
-	readerCloser,err := getStringReader(resp,reader)
+	readerCloser, err := getStringReader(resp, reader)
 	if err != nil {
 		return nil, nil, err
 	}
