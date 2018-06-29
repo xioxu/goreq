@@ -12,6 +12,8 @@ func main() {
 			Method: r.Method,
 			Url:    "https://www.baidu.com" + r.RequestURI,
 		})
+
+
 		req.PipeFromReq(r).PipeToResponse(w)
 
 	})); err != nil {

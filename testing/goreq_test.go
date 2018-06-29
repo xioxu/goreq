@@ -140,3 +140,14 @@ func TestPipeFromReq(t *testing.T) {
 	}})
 	req.Get(th.Endpoint() + "req1").Do()
 }
+
+func TestGlobalOptions(t *testing.T) {
+    req := goreq.Req(&goreq.ReqOptions{FollowRedirect:&goreq.NullableBool{Value:true},Proxy: &goreq.NullableString{Value:"http://localhost:8888"}})
+    req1 := req.Req(nil).Get("http://www.abc.com")
+	req2 := req.Req(&goreq.ReqOptions{FollowRedirect:&goreq.NullableBool{Value:false}}).Get("http://www.abc.com")
+
+	th.AssertEquals(t,"http://localhost:8888",req1.Options.Proxy.Value)
+	th.AssertEquals(t,"http://localhost:8888",req2.Options.Proxy.Value)
+	th.AssertEquals(t,false,req2.Options.FollowRedirect.Value)
+	th.AssertEquals(t,true,req.Options.FollowRedirect.Value)
+}

@@ -15,7 +15,11 @@ import (
 
 var defaultTransport http.RoundTripper = &http.Transport{MaxIdleConns: 10, IdleConnTimeout: 30 * time.Second}
 var defaultClient = &http.Client{Transport: defaultTransport}
-var defaultOptions = DefaultOptions()
+var defaultOptions = &ReqOptions{
+	FollowRedirect: nil,
+	Headers:        make(map[string][]string),
+	QueryString:    make(url.Values),
+}
 
 type GoReq struct {
 	Options   *ReqOptions
@@ -34,13 +38,13 @@ type ReqOptions struct {
 	Headers map[string][]string
 
 	// follow HTTP 3xx responses as redirects (default: true).
-	FollowRedirect bool
+	FollowRedirect *NullableBool
 
 	// if not nil, remember cookies for future use (or define your custom cookie jar; see examples section)
 	Jar *cookiejar.Jar
 
 	//an HTTP proxy url to be used
-	Proxy string
+	Proxy *NullableString
 
 	//object containing querystring values to be appended to the uri
 	QueryString url.Values
@@ -111,20 +115,7 @@ func (options *ReqOptions) buidUrl() string {
 	return url
 }
 
-func DefaultOptions() *ReqOptions {
-	options := ReqOptions{
-		Method:         "Get",
-		FollowRedirect: false,
-		Headers:        make(map[string][]string),
-		QueryString:    make(url.Values),
-	}
 
-	return &options
-}
-
-func Options(opts *ReqOptions) *ReqOptions {
-	return mergeOptions(opts, defaultOptions)
-}
 
 func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
 	if copyTo == nil {
@@ -148,6 +139,17 @@ func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
 		copyTo.Jar = copyFrom.Jar
 	}
 
+	if copyFrom.FollowRedirect != nil{
+		redirect := *copyFrom.FollowRedirect
+		copyTo.FollowRedirect = &redirect
+	}
+
+	if copyFrom.Proxy != nil{
+		proxy := *copyFrom.Proxy
+		copyTo.Proxy = &proxy
+	}
+
+
 	if copyTo.Headers == nil {
 		copyTo.Headers = copyFrom.Headers
 	} else {
@@ -159,6 +161,11 @@ func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
 	return copyTo
 }
 
+func (req *GoReq) Req(options *ReqOptions) *GoReq {
+	mergedOptions := *req.Options
+   return Req(mergeOptions(&mergedOptions,options))
+}
+
 func Req(options *ReqOptions) *GoReq {
 	goReq := GoReq{}
 	goReq.transport = &http.Transport{
@@ -168,7 +175,13 @@ func Req(options *ReqOptions) *GoReq {
 		Transport: goReq.transport,
 	}
 
-	goReq.Options = mergeOptions(options, defaultOptions)
+	if options == nil{
+		copyDefault := *defaultOptions
+		goReq.Options = &copyDefault
+	}else {
+		goReq.Options = options
+	}
+
 	return &goReq
 }
 
@@ -319,8 +332,8 @@ func (req *GoReq) To(result interface{}) (*http.Response, error) {
 }
 
 func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
-	if req.Options.Proxy != "" {
-		parsedProxyUrl, err := url.Parse(req.Options.Proxy)
+	if req.Options.Proxy != nil {
+		parsedProxyUrl, err := url.Parse(req.Options.Proxy.Value)
 
 		if err != nil {
 			return nil, nil, err
@@ -363,11 +376,15 @@ func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
 		return nil, nil, err
 	}
 
-	if req.Options.FollowRedirect {
+	if req.Options.FollowRedirect == nil {
           req.client.CheckRedirect = nil
 	}else {
-		req.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
+		if req.Options.FollowRedirect.Value {
+			req.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			}
+		}else {
+			req.client.CheckRedirect = nil
 		}
 	}
 
