@@ -1,6 +1,6 @@
 language: go
 go:
- - 1.9.2
+ - "1.x"
 notifications:
   email:
       - mailme.xu@gmail.com
