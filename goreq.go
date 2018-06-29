@@ -52,6 +52,8 @@ type ReqOptions struct {
 	bodyContent httpReqBody
 
 	Timeout time.Duration
+
+    HeadersToBeRemove []string
 }
 
 type httpReqBody interface {
@@ -114,7 +116,6 @@ func (options *ReqOptions) buidUrl() string {
 
 	return url
 }
-
 
 
 func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
@@ -268,7 +269,6 @@ func (req *GoReq) PipeFromReq(r *http.Request) *GoReq {
 	}
 	pHeaders := make(map[string][]string)
 	for k, v := range r.Header {
-
 		if removeReqHeaders[k] == nil {
 			pHeaders[k] = v
 		}
@@ -331,6 +331,20 @@ func (req *GoReq) To(result interface{}) (*http.Response, error) {
 	return resp, err
 }
 
+func (req *GoReq) inToBeRemovedHeader(k string)  bool {
+	if req.Options.HeadersToBeRemove == nil{
+		return false
+	}
+
+	for _,key := range req.Options.HeadersToBeRemove{
+		if key == k {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
 	if req.Options.Proxy != nil {
 		parsedProxyUrl, err := url.Parse(req.Options.Proxy.Value)
@@ -368,7 +382,9 @@ func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
 
 	if req.Options.Headers != nil {
 		for k, v := range req.Options.Headers {
-			httpReq.Header[k] = v
+			if !req.inToBeRemovedHeader(k) {
+				httpReq.Header[k] = v
+			}
 		}
 	}
 

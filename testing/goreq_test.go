@@ -141,6 +141,23 @@ func TestPipeFromReq(t *testing.T) {
 	req.Get(th.Endpoint() + "req1").Do()
 }
 
+func TestRemoveHeader(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+
+	th.Mux.HandleFunc("/req1", func(w http.ResponseWriter, r *http.Request) {
+		th.TestHeader(t,r,"header1","headver1_val")
+		th.TestHeader(t,r,"header2","")
+
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := goreq.Req(&goreq.ReqOptions{Headers: map[string][]string{
+		"header1":{"headver1_val"},
+		"header2":{"headver2_val"},
+	},HeadersToBeRemove:[]string{"header2"}})
+	req.Get(th.Endpoint() + "req1").Do()
+}
 func TestGlobalOptions(t *testing.T) {
     req := goreq.Req(&goreq.ReqOptions{FollowRedirect:&goreq.NullableBool{Value:true},Proxy: &goreq.NullableString{Value:"http://localhost:8888"}})
     req1 := req.Req(nil).Get("http://www.abc.com")
