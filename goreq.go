@@ -64,6 +64,103 @@ type formContent struct {
 	content url.Values
 }
 
+func (req *GoReq) inToBeRemovedHeader(k string) bool {
+	if req.Options.HeadersToBeRemove == nil {
+		return false
+	}
+
+	for _, key := range req.Options.HeadersToBeRemove {
+		if key == k {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
+	if req.Options.Proxy != nil {
+		parsedProxyUrl, err := url.Parse(req.Options.Proxy.Value)
+
+		if err != nil {
+			return nil, nil, err
+		} else {
+			req.transport.Proxy = http.ProxyURL(parsedProxyUrl)
+		}
+	}
+
+	if req.Options.Jar != nil {
+		req.client.Jar = req.Options.Jar
+	}
+
+	if req.Options.Timeout > 0 {
+		req.client.Timeout = req.Options.Timeout
+	}
+
+	var submitBody io.Reader
+	var contentType string
+	if req.Options.bodyContent != nil {
+		contentType, submitBody = req.Options.bodyContent.build()
+
+		if closer, ok := submitBody.(io.ReadCloser); ok {
+			defer closer.Close()
+		}
+		req.Options.Headers["Content-Type"] = []string{contentType}
+	}
+
+	httpReq, err := http.NewRequest(strings.ToUpper(req.Options.Method), req.Options.buidUrl(), submitBody)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if req.Options.Headers != nil {
+		for k, v := range req.Options.Headers {
+			if !req.inToBeRemovedHeader(k) {
+				httpReq.Header[k] = v
+			}
+		}
+	}
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if req.Options.FollowRedirect == nil {
+		req.client.CheckRedirect = nil
+	} else {
+		if req.Options.FollowRedirect.Value {
+			req.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			}
+		} else {
+			req.client.CheckRedirect = nil
+		}
+	}
+
+	resp, err := req.client.Do(httpReq)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return resp.Body, resp, nil
+}
+
+func getStringReader(resp *http.Response, reader io.ReadCloser) (io.ReadCloser, error) {
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		defer reader.Close()
+		reader, err := gzip.NewReader(resp.Body)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return reader, nil
+	}
+
+	return reader, nil
+}
+
 func (form *formContent) build() (contentType string, data io.Reader) {
 	return "application/x-www-form-urlencoded", strings.NewReader(form.content.Encode())
 }
@@ -327,103 +424,6 @@ func (req *GoReq) To(result interface{}) (*http.Response, error) {
 	}
 
 	return resp, err
-}
-
-func (req *GoReq) inToBeRemovedHeader(k string) bool {
-	if req.Options.HeadersToBeRemove == nil {
-		return false
-	}
-
-	for _, key := range req.Options.HeadersToBeRemove {
-		if key == k {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
-	if req.Options.Proxy != nil {
-		parsedProxyUrl, err := url.Parse(req.Options.Proxy.Value)
-
-		if err != nil {
-			return nil, nil, err
-		} else {
-			req.transport.Proxy = http.ProxyURL(parsedProxyUrl)
-		}
-	}
-
-	if req.Options.Jar != nil {
-		req.client.Jar = req.Options.Jar
-	}
-
-	if req.Options.Timeout > 0 {
-		req.client.Timeout = req.Options.Timeout
-	}
-
-	var submitBody io.Reader
-	var contentType string
-	if req.Options.bodyContent != nil {
-		contentType, submitBody = req.Options.bodyContent.build()
-
-		if closer, ok := submitBody.(io.ReadCloser); ok {
-			defer closer.Close()
-		}
-		req.Options.Headers["Content-Type"] = []string{contentType}
-	}
-
-	httpReq, err := http.NewRequest(strings.ToUpper(req.Options.Method), req.Options.buidUrl(), submitBody)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if req.Options.Headers != nil {
-		for k, v := range req.Options.Headers {
-			if !req.inToBeRemovedHeader(k) {
-				httpReq.Header[k] = v
-			}
-		}
-	}
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if req.Options.FollowRedirect == nil {
-		req.client.CheckRedirect = nil
-	} else {
-		if req.Options.FollowRedirect.Value {
-			req.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-				return http.ErrUseLastResponse
-			}
-		} else {
-			req.client.CheckRedirect = nil
-		}
-	}
-
-	resp, err := req.client.Do(httpReq)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return resp.Body, resp, nil
-}
-
-func getStringReader(resp *http.Response, reader io.ReadCloser) (io.ReadCloser, error) {
-	if resp.Header.Get("Content-Encoding") == "gzip" {
-		defer reader.Close()
-		reader, err := gzip.NewReader(resp.Body)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return reader, nil
-	}
-
-	return reader, nil
 }
 
 func (req *GoReq) Do() ([]byte, *http.Response, error) {
