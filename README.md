@@ -23,15 +23,18 @@ A simple http request library for golang.
 - [BodyContent](#bodycontent)
 
 ## Options
-- Method - http method
-- Url - Fully qualified uri 
-- Proxy - A proxy address used for send http request
-- Headers - The http headers you want add to http request
-- FollowRedirect - follow HTTP 3xx responses as redirects (default: true).
-- Jar - if not nil, remember cookies for future use (or define your custom cookie jar; see cookies section in folloing)
-- QueryString - object containing querystring values to be appended to the uri
-- Timeout - request timeout value
-- HeadersToBeRemove - The headers you want to remove before send request
+
+| Property        | Description           | Notes  |
+| ------------- | ------------- | ----- |
+| Method      | HTTP method | - |
+| URL      | Fully qualified uri | - |
+| Proxy      | Address of an HTTP proxy | - |
+| Headers      | HTTP headers to setup for the request | - |
+| FollowRedirect      | Follow HTTP 3xx responses as redirects | default: true |
+| Jar      | A cookie Jar to use for multiple subsequent requests | You can define your own custom cookie jar; see cookies section in following |
+| QueryString      | Object containing querystring values to be appended to the uri | - |
+| Timeout      | Request timeout value | Global request timeout, see https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/#clienttimeouts |
+| HeadersToBeRemove      | The headers you want to remove before send request | - |
 
 ## Proxy
 If you specify a proxy option, then the request (and any subsequent redirects) will be sent via a connection to the proxy server.
