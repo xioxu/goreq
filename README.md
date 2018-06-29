@@ -24,8 +24,14 @@ golang下的一个轻量级http request类库
 - [BodyContent](#bodycontent)
 
 ## Options
+- Method - http method
+- Url - Fully qualified uri 
 - Proxy - A proxy address used for send http request
-- Headers - The headers you want to add to http request
+- Headers - The http headers you want add to http request
+- FollowRedirect - follow HTTP 3xx responses as redirects (default: true).
+- Jar - if not nil, remember cookies for future use (or define your custom cookie jar; see cookies section in folloing)
+- QueryString - object containing querystring values to be appended to the uri
+- Timeout - request timeout value
 - HeadersToBeRemove - The headers you want to remove before send request
 
 ## Proxy
@@ -84,3 +90,14 @@ You can set the request body with the folloing methods:
 - JsonObject
 - JsonString
 - FormData 
+
+## Cookie
+
+```$xslt
+cookieJar,_ := cookiejar.New(nil)
+req := goreq.Req(&goreq.ReqOptions{
+			Method: "get",
+			Url:    "https://www.baidu.com",
+			Jar:cookieJar,
+		})
+```
