@@ -71,7 +71,6 @@ func TestPipeStream(t *testing.T) {
 	th.Mux.HandleFunc("/req", func(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Fprintf(w, "abc")
-		w.WriteHeader(http.StatusOK)
 	})
 
 	req := goreq.Req(nil)
@@ -87,7 +86,6 @@ func TestPipeReq(t *testing.T) {
 
 	th.Mux.HandleFunc("/req1", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "abc")
-		w.WriteHeader(http.StatusOK)
 	})
 
 	th.Mux.HandleFunc("/req2", func(w http.ResponseWriter, r *http.Request) {
