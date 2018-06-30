@@ -33,7 +33,7 @@ A simple http request library for golang.
 | FollowRedirect      | Follow HTTP 3xx responses as redirects | default: true |
 | Jar      | A cookie Jar to use for multiple subsequent requests | You can define your own custom cookie jar; see cookies section in following |
 | QueryString      | Object containing querystring values to be appended to the uri | - |
-| Timeout      | Request timeout value | Global request timeout, see https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/#clienttimeouts |
+| Timeout      | Request timeout value | Global request timeout(e.g: 15 * time.Second),  see https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/#clienttimeouts |
 | HeadersToBeRemove      | The headers you want to remove before send request | - |
 
 ## Proxy

@@ -49,11 +49,12 @@ type ReqOptions struct {
 	//an HTTP proxy url to be used
 	Proxy *NullableString
 
-	//object containing querystring values to be appended to the uri
+	// object containing querystring values to be appended to the uri
 	QueryString url.Values
 
 	bodyContent httpReqBody
 
+	// e.g 15 * time.Second
 	Timeout time.Duration
 
 	HeadersToBeRemove []string
