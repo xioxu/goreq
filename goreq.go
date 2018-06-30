@@ -5,12 +5,12 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
 	"time"
+	"io/ioutil"
 )
 
 var defaultTransport http.RoundTripper = &http.Transport{MaxIdleConns: 10, IdleConnTimeout: 30 * time.Second}
@@ -21,14 +21,17 @@ var defaultOptions = &ReqOptions{
 	QueryString:    make(url.Values),
 }
 
+// GoReq stores details that are required to interact with a http request and represents the methods to manipulates the request data.
+// Generally, you acquire a GoRep by calling goReq.Req() method
 type GoReq struct {
 	Options   *ReqOptions
 	client    *http.Client
 	transport *http.Transport
 }
 
+// ReqOptions stores information needed during http request
 type ReqOptions struct {
-	//http method (default: "GET")
+	//http method (default: "GET"), case insensitive
 	Method string
 
 	//fully qualified uri or a parsed url object from url.parse()
@@ -56,10 +59,12 @@ type ReqOptions struct {
 	HeadersToBeRemove []string
 }
 
+// httpReqBody is an interface that providers the request body content and content type
 type httpReqBody interface {
 	build() (contentType string, data io.Reader)
 }
 
+// formContent implements httpReqBody to use form data in http request
 type formContent struct {
 	content url.Values
 }
@@ -257,11 +262,16 @@ func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
 	return copyTo
 }
 
+// Req returns a GoRep with a nother GoRep options
 func (req *GoReq) Req(options *ReqOptions) *GoReq {
 	mergedOptions := *req.Options
 	return Req(mergeOptions(&mergedOptions, options))
 }
 
+/*
+ Req prepares a GoReq instance. A basic example of using this would be:
+   req := goreq.Req(nil)
+ */
 func Req(options *ReqOptions) *GoReq {
 	goReq := GoReq{}
 	goReq.transport = &http.Transport{
@@ -281,18 +291,31 @@ func Req(options *ReqOptions) *GoReq {
 	return &goReq
 }
 
+/*
+ Post indicates use post method and the post url, equals to:
+    req.Options.Url = url
+    req.Options.Method = "POST"
+ */
 func (req *GoReq) Post(url string) *GoReq {
 	req.Options.Url = url
 	req.Options.Method = "POST"
 	return req
 }
 
+/*
+ Get indicates use get method and the get url, equals to:
+    req.Options.Url = url
+    req.Options.Method = "GET"
+ */
 func (req *GoReq) Get(url string) *GoReq {
 	req.Options.Url = url
 	req.Options.Method = "Get"
 	return req
 }
 
+/*
+ FormData sets the http request body and makes the content-type to "application/x-www-form-urlencoded"
+ */
 func (req *GoReq) FormData(formData url.Values) *GoReq {
 	req.Options.bodyContent = &formContent{
 		content: formData,
@@ -300,6 +323,9 @@ func (req *GoReq) FormData(formData url.Values) *GoReq {
 	return req
 }
 
+/*
+ JsonString sets the http request body and makes the content-type to "application/json"
+ */
 func (req *GoReq) JsonString(jsonStr []byte) *GoReq {
 	req.Options.bodyContent = &jsonContent{
 		content: jsonStr,
@@ -308,6 +334,9 @@ func (req *GoReq) JsonString(jsonStr []byte) *GoReq {
 	return req
 }
 
+/*
+ JsonObject sets the http request body and makes the content-type to "application/json"
+ */
 func (req *GoReq) JsonObject(jsonObj interface{}) *GoReq {
 	req.Options.bodyContent = &jsonObjContent{
 		content: jsonObj,
@@ -315,6 +344,10 @@ func (req *GoReq) JsonObject(jsonObj interface{}) *GoReq {
 
 	return req
 }
+
+/*
+ PipeToResponse pipes the result to a http.Response
+ */
 func (req *GoReq) PipeToResponse(w http.ResponseWriter) error {
 	reader, resp, err := req.prepareReq()
 
@@ -356,6 +389,9 @@ func (req *GoReq) PipeToResponse(w http.ResponseWriter) error {
 	return nil
 }
 
+/*
+ PipeFromReq pips the http.Request content to goReq request
+ */
 func (req *GoReq) PipeFromReq(r *http.Request) *GoReq {
 	removeReqHeaders := map[string]interface{}{
 		"Connection": 1,
@@ -375,6 +411,7 @@ func (req *GoReq) PipeFromReq(r *http.Request) *GoReq {
 	return req
 }
 
+// PipeStream  pipes the response to a writer (e.g: file stream).
 func (req *GoReq) PipeStream(writer io.Writer) error {
 	reader, resp, err := req.prepareReq()
 	readerCloser, err := getStringReader(resp, reader)
@@ -404,6 +441,7 @@ func (req *GoReq) PipeStream(writer io.Writer) error {
 	return nil
 }
 
+// PipeReq pipes the request result to next request
 func (req *GoReq) PipeReq(nextReq *GoReq) (*GoReq, error) {
 	reader, resp, err := req.prepareReq()
 	readerCloser, err := getStringReader(resp, reader)
@@ -416,7 +454,8 @@ func (req *GoReq) PipeReq(nextReq *GoReq) (*GoReq, error) {
 	return nextReq, nil
 }
 
-func (req *GoReq) To(result interface{}) (*http.Response, error) {
+// UnmarshalJson unmarshals json result to a model
+func (req *GoReq) UnmarshalJson(result interface{}) (*http.Response, error) {
 	body, resp, err := req.Do()
 
 	if err == nil {
@@ -426,6 +465,7 @@ func (req *GoReq) To(result interface{}) (*http.Response, error) {
 	return resp, err
 }
 
+// Do method sends the request and return the result
 func (req *GoReq) Do() ([]byte, *http.Response, error) {
 	reader, resp, err := req.prepareReq()
 	readerCloser, err := getStringReader(resp, reader)
