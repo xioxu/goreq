@@ -22,7 +22,7 @@ var defaultOptions = &ReqOptions{
 }
 
 /*
- GoReq stores details that are required to interact with a http request and represents the methods to manipulates the request data.
+GoReq stores details that are required to interact with a http request and represents the methods to manipulates the request data.
 
 Generally, you acquire a GoRep by calling goReq.Req() method.
 
