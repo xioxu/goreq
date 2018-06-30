@@ -17,7 +17,7 @@ var defaultTransport http.RoundTripper = &http.Transport{MaxIdleConns: 10, IdleC
 var defaultClient = &http.Client{Transport: defaultTransport}
 var defaultOptions = &ReqOptions{
 	FollowRedirect: nil,
-	Headers:        make(map[string][]string),
+	Headers:        make(http.Header),
 	QueryString:    make(url.Values),
 }
 
@@ -38,7 +38,7 @@ type ReqOptions struct {
 	Url string
 
 	//http headers (default: {})
-	Headers map[string][]string
+	Headers http.Header
 
 	// follow HTTP 3xx responses as redirects (default: true).
 	FollowRedirect *NullableBool
@@ -252,11 +252,11 @@ func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
 	}
 
 	if copyTo.Headers == nil {
-		copyTo.Headers = copyFrom.Headers
-	} else {
-		for k, v := range copyFrom.Headers {
-			copyTo.Headers[k] = v
-		}
+		copyTo.Headers = make(http.Header)
+	}
+
+	for k, v := range copyFrom.Headers {
+		copyTo.Headers[k] = v
 	}
 
 	return copyTo
