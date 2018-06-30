@@ -27,7 +27,7 @@ func ExampleGoReq_PipeReq() {
 			Url:    "https://www.baidu.com" + r.RequestURI,
 		})
 
-		req.PipeFromReq(r).PipeToResponse(w)
+		req.PipeFromHttpReq(r).PipeToResponse(w)
 	})); err != nil {
 		panic(err)
 	}

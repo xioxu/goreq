@@ -390,9 +390,9 @@ func (req *GoReq) PipeToResponse(w http.ResponseWriter) error {
 }
 
 /*
- PipeFromReq pips the http.Request content to goReq request
+ PipeFromHttpReq pips the http.Request content to goReq request
  */
-func (req *GoReq) PipeFromReq(r *http.Request) *GoReq {
+func (req *GoReq) PipeFromHttpReq(r *http.Request) *GoReq {
 	removeReqHeaders := map[string]interface{}{
 		"Connection": 1,
 		"Referer":    1,

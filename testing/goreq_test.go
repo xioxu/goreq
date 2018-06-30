@@ -117,7 +117,7 @@ func TestGet(t *testing.T) {
 	th.AssertEquals(t, 200, resp.StatusCode)
 }
 
-func TestPipeFromReq(t *testing.T) {
+func TestPipeFromHttpReq(t *testing.T) {
 	th.SetupHTTP()
 	defer th.TeardownHTTP()
 
@@ -126,7 +126,7 @@ func TestPipeFromReq(t *testing.T) {
 		fmt.Fprintf(w, "abc")
 
 		req := goreq.Req(nil)
-		req.Get(th.Endpoint() + "req2").PipeFromReq(r).Do()
+		req.Get(th.Endpoint() + "req2").PipeFromHttpReq(r).Do()
 	})
 
 	th.Mux.HandleFunc("/req2", func(w http.ResponseWriter, r *http.Request) {
