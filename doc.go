@@ -20,5 +20,4 @@ Example to submit a request
 This top-level package contains utility functions and data types that are used
 throughout the http requesting.
 */
-
 package goreq
