@@ -23,7 +23,9 @@ var defaultOptions = &ReqOptions{
 
 /*
 GoReq stores details that are required to interact with a http request and represents the methods to manipulates the request data.
+
 Generally, you acquire a GoRep by calling goReq.Req() method.
+
 GoReq is not thread safe, so do not use it in concurrency case, but you can reuse it to do different http request,
 and it is also the suggested usage
 */
