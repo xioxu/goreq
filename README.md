@@ -31,6 +31,7 @@ A simple http request library for golang.
 | Proxy      | Address of an HTTP proxy | - |
 | Headers      | HTTP headers to setup for the request | - |
 | FollowRedirect      | Follow HTTP 3xx responses as redirects | default: true , you can use goreq.TrueVal or goreq.FalseVal to set |
+| DisableKeepAlive      | Disable keep alive feature | default: false, you can use goreq.TrueVal or goreq.FalseVal to set |
 | Jar      | A cookie Jar to use for multiple subsequent requests | You can define your own custom cookie jar; see cookies section in following |
 | QueryString      | Object containing querystring values to be appended to the uri | - |
 | Timeout      | Request timeout value | Global request timeout(e.g: 15 * time.Second),  see https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/#clienttimeouts |

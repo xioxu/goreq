@@ -48,6 +48,9 @@ type ReqOptions struct {
 	// follow HTTP 3xx responses as redirects (default: true).
 	FollowRedirect *bool
 
+	// disable keep alive feature (default: false)
+	DisableKeepAlive *bool
+
 	// if not nil, remember cookies for future use (or define your custom cookie jar; see examples section)
 	Jar *cookiejar.Jar
 
@@ -146,6 +149,10 @@ func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
 		} else {
 			req.client.CheckRedirect = nil
 		}
+	}
+
+	if req.Options.DisableKeepAlive != nil{
+		httpReq.Close = *req.Options.DisableKeepAlive
 	}
 
 	resp, err := req.client.Do(httpReq)
@@ -250,6 +257,11 @@ func mergeOptions(copyTo *ReqOptions, copyFrom *ReqOptions) *ReqOptions {
 	if copyFrom.FollowRedirect != nil {
 		redirect := *copyFrom.FollowRedirect
 		copyTo.FollowRedirect = &redirect
+	}
+
+	if copyFrom.DisableKeepAlive != nil {
+		keepAlive := *copyFrom.DisableKeepAlive
+		copyTo.DisableKeepAlive = &keepAlive
 	}
 
 	if copyFrom.Proxy != nil {
