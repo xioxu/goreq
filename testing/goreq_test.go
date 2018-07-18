@@ -69,7 +69,6 @@ func TestPipeStream(t *testing.T) {
 	defer th.TeardownHTTP()
 
 	th.Mux.HandleFunc("/req", func(w http.ResponseWriter, r *http.Request) {
-
 		fmt.Fprintf(w, "abc")
 	})
 
@@ -156,13 +155,14 @@ func TestRemoveHeader(t *testing.T) {
 	}, HeadersToBeRemove: []string{"header2"}})
 	req.Get(th.Endpoint() + "req1").Do()
 }
-func TestGlobalOptions(t *testing.T) {
-	req := goreq.Req(&goreq.ReqOptions{FollowRedirect: &goreq.NullableBool{Value: true}, Proxy: &goreq.NullableString{Value: "http://localhost:8888"}})
-	req1 := req.Req(nil).Get("http://www.abc.com")
-	req2 := req.Req(&goreq.ReqOptions{FollowRedirect: &goreq.NullableBool{Value: false}}).Get("http://www.abc.com")
 
-	th.AssertEquals(t, "http://localhost:8888", req1.Options.Proxy.Value)
-	th.AssertEquals(t, "http://localhost:8888", req2.Options.Proxy.Value)
-	th.AssertEquals(t, false, req2.Options.FollowRedirect.Value)
-	th.AssertEquals(t, true, req.Options.FollowRedirect.Value)
+func TestGlobalOptions(t *testing.T) {
+	req := goreq.Req(&goreq.ReqOptions{FollowRedirect:goreq.TrueVal, Proxy: goreq.NewString("http://localhost:8888")})
+	req1 := req.Req(nil).Get("http://www.abc.com")
+	req2 := req.Req(&goreq.ReqOptions{FollowRedirect: goreq.FalseVal}).Get("http://www.abc.com")
+
+	th.AssertEquals(t, "http://localhost:8888", *req1.Options.Proxy)
+	th.AssertEquals(t, "http://localhost:8888", *req2.Options.Proxy)
+	th.AssertEquals(t, false, *req2.Options.FollowRedirect)
+	th.AssertEquals(t, true, *req.Options.FollowRedirect)
 }

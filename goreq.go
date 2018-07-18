@@ -16,7 +16,6 @@ import (
 var defaultTransport http.RoundTripper = &http.Transport{MaxIdleConns: 10, IdleConnTimeout: 30 * time.Second}
 var defaultClient = &http.Client{Transport: defaultTransport}
 var defaultOptions = &ReqOptions{
-	FollowRedirect: nil,
 	Headers:        make(http.Header),
 	QueryString:    make(url.Values),
 }
@@ -47,13 +46,13 @@ type ReqOptions struct {
 	Headers http.Header
 
 	// follow HTTP 3xx responses as redirects (default: true).
-	FollowRedirect *NullableBool
+	FollowRedirect *bool
 
 	// if not nil, remember cookies for future use (or define your custom cookie jar; see examples section)
 	Jar *cookiejar.Jar
 
 	//an HTTP proxy url to be used
-	Proxy *NullableString
+	Proxy *string
 
 	// object containing querystring values to be appended to the uri
 	QueryString url.Values
@@ -92,7 +91,7 @@ func (req *GoReq) inToBeRemovedHeader(k string) bool {
 
 func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
 	if req.Options.Proxy != nil {
-		parsedProxyUrl, err := url.Parse(req.Options.Proxy.Value)
+		parsedProxyUrl, err := url.Parse(*req.Options.Proxy)
 
 		if err != nil {
 			return nil, nil, err
@@ -140,7 +139,7 @@ func (req *GoReq) prepareReq() (io.ReadCloser, *http.Response, error) {
 	if req.Options.FollowRedirect == nil {
 		req.client.CheckRedirect = nil
 	} else {
-		if req.Options.FollowRedirect.Value {
+		if *req.Options.FollowRedirect {
 			req.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
 			}

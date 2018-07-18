@@ -1,9 +1,11 @@
 package goreq
 
-type NullableString struct {
-	Value string
-}
+var trueVal = true
+var falseVal = false
 
-type NullableBool struct {
-	Value bool
+var TrueVal = &trueVal
+var FalseVal = &falseVal
+
+func NewString(str string)  *string{
+	return &str
 }
