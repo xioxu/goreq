@@ -6,7 +6,7 @@ import (
 )
 
 func ExampleGoReq_Req() {
-	req := Req(&ReqOptions{Proxy:&NullableString{Value:"http://localhost:8888"}})
+	req := Req(&ReqOptions{Proxy:NewString("http://localhost:8888")})
 
 	// req1 still keeps the options of req
 	req1 := req.Req(nil)
