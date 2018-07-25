@@ -93,7 +93,22 @@ You can set the request body with the folloing methods:
 - JsonObject
 - JsonString
 - FormData 
+```go
+	req := Req(nil)
 
+	v := url.Values{
+		"username": []string{"test"},
+		"password": []string{"test"},
+	}
+
+	body,_, err := req.Post("http://localhost/login").FormData(v).Do()
+
+	if err != nil{
+		fmt.Print(body)
+	}
+```
+	
+    
 ## Cookie
 
 ```go
